@@ -32,7 +32,7 @@ const TodoRow = styled(({ completed: _completed, ...rest }: TodoRowProps) => <Bo
         padding-right: 12px;
     }
 
-    &:hover .delete-btn {
+    &:hover button {
         opacity: 1;
     }
 `;

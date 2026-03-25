@@ -6,7 +6,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
-import {EnvConfig} from "../config/environment";
+import {EnvConfig} from "../config/environments";
 
 interface ApiStackProps extends cdk.StackProps {
     config: EnvConfig;
@@ -14,6 +14,8 @@ interface ApiStackProps extends cdk.StackProps {
 
 export class ApiStack extends cdk.Stack {
     public readonly apiUrl: string;
+    public readonly apiDomain: string;
+    public readonly apiStage: string;
 
     constructor(scope: Construct, id: string, props: ApiStackProps) {
         super(scope, id, props);
@@ -67,7 +69,8 @@ export class ApiStack extends cdk.Stack {
 
         const lambdaIntegration = new apigateway.LambdaIntegration(todoHandler);
 
-        const todos = api.root.addResource('todos');
+        const api_resource = api.root.addResource('api');
+        const todos = api_resource.addResource('todos');
         todos.addMethod('GET', lambdaIntegration);
         todos.addMethod('POST', lambdaIntegration);
 
@@ -76,6 +79,8 @@ export class ApiStack extends cdk.Stack {
         todo.addMethod('DELETE', lambdaIntegration);
 
         this.apiUrl = api.url;
+        this.apiDomain = `${api.restApiId}.execute-api.${this.region}.amazonaws.com`;
+        this.apiStage = props.config.stage;
 
         new cdk.CfnOutput(this, 'ApiUrl', {
             value: api.url,

@@ -19,10 +19,7 @@ import DeleteBtn from "./components/DeleteBtn.tsx";
 
 // ─── Types & helpers ──────────────────────────────────────────────────────────
 
-const API_URL =
-    (typeof import.meta !== "undefined" &&
-        (import.meta as any).env?.VITE_API_URL) ??
-    "";
+const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 interface Todo {
     todoId: string;
@@ -55,13 +52,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     return res.json();
 }
 
-const MOCK_TODOS: Todo[] = [
-    { todoId: "1", title: "Set up CDK pipeline", completed: true, createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-    { todoId: "2", title: "Deploy API stack to dev", completed: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { todoId: "3", title: "Wire frontend to Lambda", completed: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { todoId: "4", title: "Add manual approval gate for prod", completed: false, createdAt: new Date().toISOString() },
-];
-
 function formatRelative(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
@@ -83,10 +73,8 @@ function TodoApp() {
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<Filter>("all");
     const inputRef = useRef<HTMLInputElement>(null);
-    const useMock = !API_URL;
 
     const fetchTodos = useCallback(async () => {
-        if (useMock) { setTodos(MOCK_TODOS); setLoading(false); return; }
         try {
             const data = await apiFetch<{ todos: Todo[] }>("/todos");
             setTodos(data.todos);
@@ -95,7 +83,7 @@ function TodoApp() {
         } finally {
             setLoading(false);
         }
-    }, [useMock]);
+    }, []);
 
     useEffect(() => { fetchTodos(); }, [fetchTodos]);
 
@@ -105,18 +93,11 @@ function TodoApp() {
         if (!title || adding) return;
         setAdding(true);
         try {
-            if (useMock) {
-                setTodos(prev => [
-                    { todoId: crypto.randomUUID(), title, completed: false, createdAt: new Date().toISOString() },
-                    ...prev,
-                ]);
-            } else {
-                const todo = await apiFetch<Todo>("/todos", {
-                    method: "POST",
-                    body: JSON.stringify({ title }),
-                });
-                setTodos(prev => [todo, ...prev]);
-            }
+            const todo = await apiFetch<Todo>("/todos", {
+                method: "POST",
+                body: JSON.stringify({ title }),
+            });
+            setTodos(prev => [todo, ...prev]);
             setInput("");
             inputRef.current?.focus();
         } catch (e: any) {
@@ -131,13 +112,11 @@ function TodoApp() {
         setToggling(prev => new Set(prev).add(todo.todoId));
         setTodos(prev => prev.map(t => t.todoId === todo.todoId ? { ...t, completed: !t.completed } : t));
         try {
-            if (!useMock) {
-                const updated = await apiFetch<Todo>(`/todos/${todo.todoId}`, {
-                    method: "PATCH",
-                    body: JSON.stringify({ completed: !todo.completed }),
-                });
-                setTodos(prev => prev.map(t => t.todoId === todo.todoId ? updated : t));
-            }
+            const updated = await apiFetch<Todo>(`/todos/${todo.todoId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ completed: !todo.completed }),
+            });
+            setTodos(prev => prev.map(t => t.todoId === todo.todoId ? updated : t));
         } catch (e: any) {
             setTodos(prev => prev.map(t => t.todoId === todo.todoId ? todo : t));
             setError(e.message);
@@ -150,7 +129,7 @@ function TodoApp() {
         const snapshot = todos;
         setTodos(prev => prev.filter(t => t.todoId !== todoId));
         try {
-            if (!useMock) await apiFetch(`/todos/${todoId}`, { method: "DELETE" });
+            await apiFetch(`/todos/${todoId}`, { method: "DELETE" });
         } catch (e: any) {
             setTodos(snapshot);
             setError(e.message);
