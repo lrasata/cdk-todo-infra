@@ -5,6 +5,7 @@ import { ApiStack } from '../lib/stacks/api-stack';
 import { CertificateStack } from '../lib/stacks/certificate-stack';
 import { WafStack } from '../lib/stacks/waf-stack';
 import { FrontendStack } from '../lib/stacks/frontend-stack';
+import { PipelineStack } from '../lib/stacks/pipeline-stack';
 import { getConfig } from '../lib/config/environments';
 
 const app = new cdk.App();
@@ -22,28 +23,25 @@ const mainEnv = {
     region: config.region,
 };
 
-// Certificate — must be in us-east-1 for CloudFront
+// ── Manual stacks (used locally / before pipeline exists) ──────────────────
+
 const certStack = new CertificateStack(app, `CertStack-${stage}`, {
     env: usEast1Env,
     crossRegionReferences: true,
     config,
 });
 
-// WAF — must be in us-east-1 for CloudFront scope
 const wafStack = new WafStack(app, `WafStack-${stage}`, {
     env: usEast1Env,
     crossRegionReferences: true,
     config,
 });
 
-// API — Lambda + DynamoDB + API Gateway
 const apiStack = new ApiStack(app, `ApiStack-${stage}`, {
     env: mainEnv,
     config,
 });
 
-// Frontend — S3 + CloudFront + Route53
-// apiStack.apiUrl is passed so CloudFront can forward /api/* to API Gateway
 new FrontendStack(app, `FrontendStack-${stage}`, {
     env: mainEnv,
     crossRegionReferences: true,
@@ -52,4 +50,13 @@ new FrontendStack(app, `FrontendStack-${stage}`, {
     webAclArn: wafStack.webAclArn,
     apiDomain: apiStack.apiDomain,
     apiStage: apiStack.apiStage,
+});
+
+// ── Pipeline stack (deploys and manages itself after first deploy) ──────────
+
+new PipelineStack(app, 'PipelineStack', {
+    env: mainEnv,
+    codestarConnectionArn: process.env.CODESTAR_CONNECTION_ARN!,
+    repo: 'lrasata/cdk-todo-infra',
+    branch: 'main',
 });
