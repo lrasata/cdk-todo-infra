@@ -26,15 +26,34 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: |
+            todo-frontend/package-lock.json
+            todo-backend/package-lock.json
+            cdk-todo-infra/package-lock.json
+
+      - name: Build frontend
+        working-directory: todo-frontend
+        env:
+          VITE_API_URL: "https://${{ github.event.inputs.stage }}.${{ secrets.DOMAIN_NAME }}/api"
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend
+        working-directory: todo-backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install CDK dependencies
+        working-directory: cdk-todo-infra
+        run: npm ci
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Destroy
         env:

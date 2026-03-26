@@ -1,73 +1,70 @@
-# React + TypeScript + Vite
+# todo-frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for the cdk-todo-infra full-stack todo app. Built with Vite, React 19, and MUI.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React 19** — UI
+- **MUI v7** (`@mui/material`) + Emotion — component library and styling
+- **Vite 8** — dev server and bundler
+- **TypeScript 5.9**
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Create, complete, and delete todos
+- Filter by all / active / done
+- Progress bar and stats (total, active, done, % complete)
+- Optimistic updates — toggle and delete reflect immediately, roll back on error
+- User identity via `localStorage` UUID (`todo_user_id`) — no login required, todos are scoped per browser
 
-## Expanding the ESLint configuration
+## Project structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+  App.tsx              ← main app component, all state + API calls
+  theme.ts             ← MUI theme customization
+  components/
+    TodoRow.tsx        ← styled list row with slide-in animation
+    TodoTitle.tsx      ← todo title with strikethrough when completed
+    SectionLabel.tsx   ← small uppercase section header
+    DeleteBtn.tsx      ← icon button, hidden until row hover
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## API
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+All requests go to `VITE_API_URL` (defaults to `/api` for production, where CloudFront routes `/api/*` to API Gateway).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Every request includes:
+- `Content-Type: application/json`
+- `X-User-Id: <uuid>` — read from `localStorage`, created on first visit
+
+| Method | Path | Description |
+|---|---|---|
+| GET | /todos | Fetch all todos for this user |
+| POST | /todos | Create a todo `{ title }` |
+| PATCH | /todos/{todoId} | Toggle completed `{ completed: boolean }` |
+| DELETE | /todos/{todoId} | Delete a todo |
+
+## Local development
+
+```bash
+npm ci
+VITE_API_URL=https://dev.yourdomain.com npm run dev
+```
+
+`VITE_API_URL` should point to the deployed API Gateway URL (or the CloudFront subdomain if the backend is deployed). Without it, requests go to `/api` which only works when served through CloudFront.
+
+## Build
+
+```bash
+npm run build
+```
+
+Output goes to `dist/`. This folder is uploaded to S3 by `FrontendStack` in `cdk-todo-infra` on `cdk deploy`.
+
+## Other scripts
+
+```bash
+npm run lint      # ESLint
+npm run preview   # Preview the production build locally
 ```
