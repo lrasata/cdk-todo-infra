@@ -12,7 +12,7 @@ on:
           - staging
 
 concurrency:
-  group: cdk-deploy-main
+  group: cdk-deploy-${{ github.event.inputs.stage }}
   cancel-in-progress: false
 
 jobs:
@@ -30,6 +30,28 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: |
+            todo-frontend/package-lock.json
+            todo-backend/package-lock.json
+            cdk-todo-infra/package-lock.json
+
+      - name: Build frontend
+        working-directory: todo-frontend
+        env:
+          VITE_API_URL: "https://${{ github.event.inputs.stage }}.${{ secrets.DOMAIN_NAME }}/api"
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build backend
+        working-directory: todo-backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install CDK dependencies
+        working-directory: cdk-todo-infra
+        run: npm ci
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
@@ -37,10 +59,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Synth
+        working-directory: cdk-todo-infra
         env:
           STAGE: ${{ github.event.inputs.stage }}
           CDK_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -50,10 +70,11 @@ jobs:
         run: npx cdk synth
 
       - name: Deploy
+        working-directory: cdk-todo-infra
         env:
           STAGE: ${{ github.event.inputs.stage }}
           CDK_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
           VITE_API_URL: "https://${{ github.event.inputs.stage }}.${{ secrets.DOMAIN_NAME }}/api"
-        run: npx cdk deploy FrontendStack-staging --require-approval never
+        run: npx cdk deploy --all --require-approval never
