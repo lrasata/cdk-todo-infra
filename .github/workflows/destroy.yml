@@ -56,6 +56,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Destroy
+        working-directory: cdk-todo-infra
         env:
           STAGE: ${{ github.event.inputs.stage }}
           CDK_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
