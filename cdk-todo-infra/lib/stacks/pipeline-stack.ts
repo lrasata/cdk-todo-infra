@@ -48,14 +48,24 @@ export class PipelineStack extends cdk.Stack {
             synth: synthStep,
             selfMutation: true,
             dockerEnabledForSynth: true,
+            selfMutationCodeBuildDefaults: {
+                partialBuildSpec: codebuild.BuildSpec.fromObject({
+                    phases: {
+                        install: {
+                            commands: ['npm install -g aws-cdk@2'],
+                        },
+                        build: {
+                            commands: [
+                                'cdk -a . deploy PipelineStack --require-approval=never',
+                            ],
+                        },
+                    },
+                }),
+            },
             codeBuildDefaults: {
                 buildEnvironment: {
                     buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
                     computeType: codebuild.ComputeType.SMALL,
-                    environmentVariables: {
-                        DOMAIN_NAME: { value: process.env.DOMAIN_NAME! },
-                        CDK_ACCOUNT: { value: process.env.CDK_ACCOUNT! },
-                    },
                 },
             },
         });
