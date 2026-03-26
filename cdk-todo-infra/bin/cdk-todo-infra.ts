@@ -5,7 +5,6 @@ import { ApiStack } from '../lib/stacks/api-stack';
 import { CertificateStack } from '../lib/stacks/certificate-stack';
 import { WafStack } from '../lib/stacks/waf-stack';
 import { FrontendStack } from '../lib/stacks/frontend-stack';
-import { PipelineStack } from '../lib/stacks/pipeline-stack';
 import { getConfig } from '../lib/config/environments';
 
 const app = new cdk.App();
@@ -22,8 +21,6 @@ const mainEnv = {
     account: config.account,
     region: config.region,
 };
-
-// ── Manual stacks (used locally / before pipeline exists) ──────────────────
 
 const certStack = new CertificateStack(app, `CertStack-${stage}`, {
     env: usEast1Env,
@@ -50,13 +47,4 @@ new FrontendStack(app, `FrontendStack-${stage}`, {
     webAclArn: wafStack.webAclArn,
     apiDomain: apiStack.apiDomain,
     apiStage: apiStack.apiStage,
-});
-
-// ── Pipeline stack (deploys and manages itself after first deploy) ──────────
-
-new PipelineStack(app, 'PipelineStack', {
-    env: mainEnv,
-    codestarConnectionArn: process.env.CODESTAR_CONNECTION_ARN!,
-    repo: 'lrasata/cdk-todo-infra',
-    branch: 'main',
 });
